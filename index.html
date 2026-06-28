@@ -1,0 +1,895 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>SLR Parser — Project C</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap");
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+        background: #0f1117;
+        color: #e2e8f0;
+        min-height: 100vh;
+      }
+      header {
+        background: linear-gradient(
+          135deg,
+          #1e1b4b 0%,
+          #312e81 50%,
+          #4338ca 100%
+        );
+        padding: 2.5rem 2rem;
+        text-align: center;
+        box-shadow: 0 4px 30px rgba(99, 102, 241, 0.4);
+      }
+      header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        background: linear-gradient(90deg, #a5b4fc, #c7d2fe, #e0e7ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      header p {
+        margin-top: 0.5rem;
+        color: #a5b4fc;
+        font-size: 0.95rem;
+      }
+      nav {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        padding: 1.2rem;
+        background: #161b2e;
+        flex-wrap: wrap;
+        border-bottom: 1px solid #1e2740;
+      }
+      .nav-btn {
+        padding: 0.55rem 1.2rem;
+        border-radius: 9px;
+        border: 1.5px solid #2d3a5a;
+        background: transparent;
+        color: #94a3b8;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.2s;
+      }
+      .nav-btn:hover {
+        border-color: #6366f1;
+        color: #a5b4fc;
+        background: rgba(99, 102, 241, 0.1);
+      }
+      .nav-btn.active {
+        background: rgba(99, 102, 241, 0.2);
+        border-color: #6366f1;
+        color: #a5b4fc;
+      }
+      main {
+        max-width: 1100px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+      }
+      section {
+        display: none;
+      }
+      section.active {
+        display: block;
+      }
+      .card {
+        background: #161b2e;
+        border: 1px solid #1e2740;
+        border-radius: 14px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+      .card-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #a5b4fc;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .card-title .badge {
+        font-size: 0.7rem;
+        background: #312e81;
+        color: #c7d2fe;
+        padding: 0.2rem 0.6rem;
+        border-radius: 99px;
+      }
+      .prod-list {
+        list-style: none;
+      }
+      .prod-list li {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.95rem;
+        padding: 0.45rem 0.8rem;
+        margin: 0.3rem 0;
+        background: #0d1120;
+        border-left: 3px solid #4338ca;
+        border-radius: 0 6px 6px 0;
+        color: #c7d2fe;
+      }
+      .prod-list li span.num {
+        color: #6366f1;
+        margin-right: 0.5rem;
+      }
+      .set-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 0.8rem;
+        margin-top: 0.5rem;
+      }
+      .set-box {
+        background: #0d1120;
+        border: 1px solid #1e2740;
+        border-radius: 8px;
+        padding: 0.8rem;
+      }
+      .set-box .nt {
+        font-weight: 700;
+        color: #818cf8;
+        font-size: 0.85rem;
+        margin-bottom: 0.4rem;
+      }
+      .set-box .tokens {
+        display: flex;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+      }
+      .token {
+        background: #1e293b;
+        color: #7dd3fc;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.8rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 5px;
+        border: 1px solid #2d4a6a;
+      }
+      /* States */
+      .states-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+      }
+      .state-card {
+        background: #0d1120;
+        border: 1px solid #1e2740;
+        border-radius: 10px;
+        padding: 1rem;
+        transition: border-color 0.2s;
+      }
+      .state-card:hover {
+        border-color: #4338ca;
+      }
+      .state-id {
+        font-weight: 700;
+        color: #818cf8;
+        font-size: 0.9rem;
+        margin-bottom: 0.6rem;
+        font-family: "JetBrains Mono", monospace;
+      }
+      .item {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.8rem;
+        color: #cbd5e1;
+        padding: 0.25rem 0.4rem;
+        margin: 0.2rem 0;
+        background: #0a0e1a;
+        border-radius: 4px;
+        border-left: 2px solid #334155;
+      }
+      .item .dot {
+        color: #f59e0b;
+        font-weight: 700;
+      }
+      .item.kernel {
+        border-left-color: #6366f1;
+      }
+      .goto-list {
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid #1e2740;
+      }
+      .goto-item {
+        font-size: 0.75rem;
+        color: #64748b;
+        font-family: "JetBrains Mono", monospace;
+        padding: 0.15rem 0;
+      }
+      .goto-item span {
+        color: #4ade80;
+      }
+      /* Parse Table */
+      .table-wrap {
+        overflow-x: auto;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.82rem;
+      }
+      th {
+        background: #1e1b4b;
+        color: #a5b4fc;
+        padding: 0.6rem 0.8rem;
+        text-align: center;
+        border: 1px solid #2d3a5a;
+        position: sticky;
+        top: 0;
+      }
+      th.group {
+        background: #1a1040;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6366f1;
+      }
+      td {
+        padding: 0.55rem 0.8rem;
+        border: 1px solid #1e2740;
+        text-align: center;
+        color: #94a3b8;
+        transition: background 0.15s;
+      }
+      td:hover {
+        background: #1e2740;
+      }
+      td.state {
+        background: #0d1120;
+        color: #818cf8;
+        font-weight: 700;
+      }
+      td.shift {
+        color: #34d399;
+      }
+      td.reduce {
+        color: #fb923c;
+      }
+      td.acc {
+        color: #f472b6;
+        font-weight: 700;
+      }
+      td.conflict {
+        background: #2d1515;
+        color: #f87171;
+        font-weight: 700;
+        border: 2px solid #ef4444;
+        animation: pulse 2s infinite;
+      }
+      td.goto-cell {
+        color: #7dd3fc;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3);
+        }
+        50% {
+          box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+        }
+      }
+      .conflict-note {
+        background: linear-gradient(135deg, #1a0a0a, #2d1515);
+        border: 1px solid #ef4444;
+        border-radius: 10px;
+        padding: 1rem 1.2rem;
+        margin: 1rem 0;
+        color: #fca5a5;
+      }
+      .conflict-note strong {
+        color: #f87171;
+        display: block;
+        margin-bottom: 0.4rem;
+        font-size: 1rem;
+      }
+      /* Parser trace */
+      .trace-controls {
+        display: flex;
+        gap: 0.8rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .btn {
+        padding: 0.55rem 1.2rem;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        font-family: inherit;
+        font-weight: 600;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+      }
+      .btn-primary {
+        background: #4338ca;
+        color: #e0e7ff;
+      }
+      .btn-primary:hover {
+        background: #3730a3;
+      }
+      .btn-secondary {
+        background: #1e2740;
+        color: #94a3b8;
+        border: 1px solid #2d3a5a;
+      }
+      .btn-secondary:hover {
+        background: #263150;
+      }
+      .btn-primary:disabled {
+        background: #1e2740;
+        color: #4b5563;
+        cursor: not-allowed;
+      }
+      .step-counter {
+        color: #6366f1;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-left: auto;
+      }
+      .trace-table {
+        border-collapse: collapse;
+        width: 100%;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.82rem;
+      }
+      .trace-table th {
+        background: #1e1b4b;
+        color: #a5b4fc;
+        padding: 0.6rem 1rem;
+        border: 1px solid #2d3a5a;
+        text-align: left;
+      }
+      .trace-table td {
+        padding: 0.55rem 1rem;
+        border: 1px solid #1e2740;
+        vertical-align: top;
+      }
+      .trace-table tr {
+        transition: all 0.3s;
+      }
+      .trace-table tr.current {
+        background: rgba(99, 102, 241, 0.15);
+        border-left: 3px solid #6366f1;
+      }
+      .trace-table tr.done {
+        opacity: 0.5;
+      }
+      .trace-table tr.conflict-row {
+        background: rgba(239, 68, 68, 0.1);
+      }
+      .trace-table tr.error-row {
+        background: rgba(239, 68, 68, 0.15);
+      }
+      .action-shift {
+        color: #34d399;
+      }
+      .action-reduce {
+        color: #fb923c;
+      }
+      .action-accept {
+        color: #f472b6;
+        font-weight: 700;
+      }
+      .action-conflict {
+        color: #f87171;
+        font-weight: 700;
+      }
+      .action-error {
+        color: #ef4444;
+      }
+      .progress {
+        background: #0d1120;
+        border-radius: 99px;
+        height: 4px;
+        margin: 0.5rem 0 1rem;
+        overflow: hidden;
+      }
+      .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #4338ca, #7c3aed);
+        border-radius: 99px;
+        transition: width 0.3s;
+      }
+      .info-box {
+        background: #0d1120;
+        border: 1px solid #1e2740;
+        border-radius: 8px;
+        padding: 0.8rem 1rem;
+        margin: 0.8rem 0;
+        font-size: 0.83rem;
+        color: #64748b;
+        line-height: 1.6;
+      }
+      .info-box b {
+        color: #94a3b8;
+      }
+      .highlight {
+        background: rgba(99, 102, 241, 0.15);
+        border: 1px solid #4338ca;
+        border-radius: 6px;
+        padding: 0.2rem 0.5rem;
+        color: #a5b4fc;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>SLR Parser — Project C</h1>
+      <p>
+        Augmented Grammar &nbsp;·&nbsp; Canonical LR(0) Collection &nbsp;·&nbsp;
+        SLR Parse Table &nbsp;·&nbsp; Parser Trace
+      </p>
+    </header>
+    <nav>
+      <button class="nav-btn active" onclick="show('s-grammar')">
+        ① Grammar &amp; Sets
+      </button>
+      <button class="nav-btn" onclick="show('s-items')">② LR(0) Items</button>
+      <button class="nav-btn" onclick="show('s-table')">③ Parse Table</button>
+      <button class="nav-btn" onclick="show('s-trace')">④ Parser Trace</button>
+    </nav>
+    <main>
+      <!-- ═══════════════════════════════════════════════════
+     SECTION 1 — Grammar & Sets
+═══════════════════════════════════════════════════ -->
+      <section id="s-grammar" class="active">
+        <div class="card">
+          <div class="card-title">
+            📜 Augmented Grammar <span class="badge">6 productions</span>
+          </div>
+          <ul class="prod-list">
+            <li><span class="num">0</span> S' → S</li>
+            <li><span class="num">1</span> S → L = R</li>
+            <li><span class="num">2</span> S → R</li>
+            <li><span class="num">3</span> L → * R</li>
+            <li><span class="num">4</span> L → id</li>
+            <li><span class="num">5</span> R → L</li>
+          </ul>
+          <div class="info-box" style="margin-top: 1rem">
+            <b>Terminals:</b> &nbsp;<span class="highlight">*</span>&nbsp;<span
+              class="highlight"
+              >=</span
+            >&nbsp;<span class="highlight">id</span>&nbsp;<span
+              class="highlight"
+              >$</span
+            ><br />
+            <b>Non-terminals:</b> &nbsp;<span class="highlight">S'</span
+            >&nbsp;<span class="highlight">S</span>&nbsp;<span class="highlight"
+              >L</span
+            >&nbsp;<span class="highlight">R</span><br />
+            <b>Start symbol:</b> &nbsp;<span class="highlight">S'</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🔍 FIRST Sets</div>
+          <div class="set-grid">
+            <div class="set-box">
+              <div class="nt">FIRST(S')</div>
+              <div class="tokens">
+                <span class="token">*</span><span class="token">id</span>
+              </div>
+            </div>
+            <div class="set-box">
+              <div class="nt">FIRST(S)</div>
+              <div class="tokens">
+                <span class="token">*</span><span class="token">id</span>
+              </div>
+            </div>
+            <div class="set-box">
+              <div class="nt">FIRST(L)</div>
+              <div class="tokens">
+                <span class="token">*</span><span class="token">id</span>
+              </div>
+            </div>
+            <div class="set-box">
+              <div class="nt">FIRST(R)</div>
+              <div class="tokens">
+                <span class="token">*</span><span class="token">id</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🔭 FOLLOW Sets</div>
+          <div class="set-grid">
+            <div class="set-box">
+              <div class="nt">FOLLOW(S')</div>
+              <div class="tokens"><span class="token">$</span></div>
+            </div>
+            <div class="set-box">
+              <div class="nt">FOLLOW(S)</div>
+              <div class="tokens"><span class="token">$</span></div>
+            </div>
+            <div class="set-box">
+              <div class="nt">FOLLOW(L)</div>
+              <div class="tokens">
+                <span class="token">=</span><span class="token">$</span>
+              </div>
+            </div>
+            <div class="set-box">
+              <div class="nt">FOLLOW(R)</div>
+              <div class="tokens">
+                <span class="token">=</span><span class="token">$</span>
+              </div>
+            </div>
+          </div>
+          <div class="info-box" style="margin-top: 0.8rem">
+            <b>How FOLLOW is computed:</b><br />
+            • FOLLOW(S') = {$} — start symbol rule<br />
+            • S → L = R → FOLLOW(L) ⊇ {=}; R at end → FOLLOW(R) ⊇ FOLLOW(S) =
+            {$}<br />
+            • S → R → FOLLOW(R) ⊇ FOLLOW(S) = {$}<br />
+            • R → L → FOLLOW(L) ⊇ FOLLOW(R) = {=,$}<br />
+            ∴ FOLLOW(L) = {=, $}, FOLLOW(R) = {=, $}
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════
+     SECTION 2 — LR(0) Items
+═══════════════════════════════════════════════════ -->
+      <section id="s-items">
+        <div class="card">
+          <div class="card-title">
+            🔧 Canonical LR(0) Item Collection
+            <span class="badge">10 states</span>
+          </div>
+          <div class="info-box" style="margin-bottom: 1rem">
+            <b>CLOSURE rule:</b> For [A→α·Bβ], add [B→·γ] for every
+            B-production.<br />
+            <b>GOTO(I,X):</b> Move dot past X in all items of I, then take
+            closure.
+          </div>
+          <div class="states-grid" id="states-grid"></div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════
+     SECTION 3 — Parse Table
+═══════════════════════════════════════════════════ -->
+      <section id="s-table">
+        <div class="card">
+          <div class="card-title">📊 SLR Parse Table</div>
+          <div class="conflict-note">
+            <strong>⚡ Shift-Reduce Conflict in State I₂</strong>
+            State I₂ contains both <b>[S → L · = R]</b> and
+            <b>[R → L ·]</b>.<br />
+            On lookahead <b>=</b>: SHIFT to I₆ is valid AND REDUCE(R→L) is valid
+            because <b>=</b> ∈ FOLLOW(R).<br />
+            This creates a conflict — the grammar is <b>not SLR(1)</b>.
+          </div>
+          <div class="table-wrap">
+            <table id="parse-table"></table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════
+     SECTION 4 — Parser Trace
+═══════════════════════════════════════════════════ -->
+      <section id="s-trace">
+        <div class="card">
+          <div class="card-title">
+            ▶ SLR Parser Trace — <span class="highlight">id = id * id</span>
+          </div>
+          <div class="info-box">
+            Input tokens: <span class="highlight">id</span>
+            <span class="highlight">=</span> <span class="highlight">id</span>
+            <span class="highlight">*</span> <span class="highlight">id</span>
+            <span class="highlight">$</span><br />
+            The string <b>id = id * id</b> demonstrates the
+            <b>shift-reduce conflict</b> at state I₂.<br />
+            The parser encounters an <b>error</b> after the conflict — the
+            string is not in this grammar's language, but the conflict is
+            clearly shown.
+          </div>
+          <div class="trace-controls">
+            <button
+              class="btn btn-secondary"
+              id="btn-reset"
+              onclick="resetTrace()"
+            >
+              ⟳ Reset
+            </button>
+            <button
+              class="btn btn-primary"
+              id="btn-prev"
+              onclick="stepTrace(-1)"
+              disabled
+            >
+              ◀ Prev
+            </button>
+            <button
+              class="btn btn-primary"
+              id="btn-next"
+              onclick="stepTrace(1)"
+            >
+              Next ▶
+            </button>
+            <button class="btn btn-secondary" id="btn-all" onclick="showAll()">
+              Show All
+            </button>
+            <span class="step-counter" id="step-counter">Step 0 / 5</span>
+          </div>
+          <div class="progress">
+            <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+          </div>
+          <div class="table-wrap">
+            <table class="trace-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Stack</th>
+                  <th>Input</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="trace-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script>
+      // ─── Data ────────────────────────────────────────────────────────────────────
+      const STATES = [
+        {
+          id: 0,
+          items: [
+            "S' → · S",
+            "S → · L = R",
+            "S → · R",
+            "L → · * R",
+            "L → · id",
+            "R → · L",
+          ],
+          goto: [
+            ["*", "I4"],
+            ["id", "I5"],
+            ["S", "I1"],
+            ["L", "I2"],
+            ["R", "I3"],
+          ],
+        },
+        { id: 1, items: ["S' → S ·"], goto: [] },
+        {
+          id: 2,
+          items: ["S → L · = R", "R → L ·"],
+          goto: [["=", "I6"]],
+          conflict: true,
+        },
+        { id: 3, items: ["S → R ·"], goto: [] },
+        {
+          id: 4,
+          items: ["L → · * R", "L → * · R", "L → · id", "R → · L"],
+          goto: [
+            ["*", "I4"],
+            ["id", "I5"],
+            ["L", "I7"],
+            ["R", "I8"],
+          ],
+        },
+        { id: 5, items: ["L → id ·"], goto: [] },
+        {
+          id: 6,
+          items: ["S → L = · R", "L → · * R", "L → · id", "R → · L"],
+          goto: [
+            ["*", "I4"],
+            ["id", "I5"],
+            ["L", "I7"],
+            ["R", "I9"],
+          ],
+        },
+        { id: 7, items: ["R → L ·"], goto: [] },
+        { id: 8, items: ["L → * R ·"], goto: [] },
+        { id: 9, items: ["S → L = R ·"], goto: [] },
+      ];
+
+      // kernel items (have dot not at start or are the augmented production)
+      const KERNEL = {
+        0: ["S' → · S"],
+        1: ["S' → S ·"],
+        2: ["S → L · = R", "R → L ·"],
+        3: ["S → R ·"],
+        4: ["L → * · R"],
+        5: ["L → id ·"],
+        6: ["S → L = · R"],
+        7: ["R → L ·"],
+        8: ["L → * R ·"],
+        9: ["S → L = R ·"],
+      };
+
+      // SLR table: rows=states 0-9, cols=[*,=,id,$,S,L,R]
+      // Value format: 's6'=shift6, 'r(...)=reduce, 'acc', ''=>empty, 'CONFLICT'=conflict cell
+      const TABLE_COLS = ["*", "=", "id", "$", "S", "L", "R"];
+      const TABLE_DATA = [
+        //         *        =              id       $            S  L  R
+        /* I0 */ ["s4", "", "s5", "", "1", "2", "3"],
+        /* I1 */ ["", "", "", "acc", "", "", ""],
+        /* I2 */ ["", "CONFLICT", "", "r(R→L)", "", "", ""],
+        /* I3 */ ["", "", "", "r(S→R)", "", "", ""],
+        /* I4 */ ["s4", "", "s5", "", "", "7", "8"],
+        /* I5 */ ["", "r(L→id)", "", "r(L→id)", "", "", ""],
+        /* I6 */ ["s4", "", "s5", "", "", "7", "9"],
+        /* I7 */ ["", "r(R→L)", "", "r(R→L)", "", "", ""],
+        /* I8 */ ["", "r(L→*R)", "", "r(L→*R)", "", "", ""],
+        /* I9 */ ["", "", "", "r(S→L=R)", "", "", ""],
+      ];
+
+      const TRACE = [
+        {
+          stack: "0",
+          input: "id = id * id $",
+          action: "shift 5",
+          type: "shift",
+        },
+        {
+          stack: "0 id 5",
+          input: "= id * id $",
+          action: "reduce R(L → id)",
+          type: "reduce",
+        },
+        {
+          stack: "0 L 2",
+          input: "= id * id $",
+          action:
+            "⚡ SHIFT-REDUCE CONFLICT on '='  →  shift 6 (primary chosen)",
+          type: "conflict",
+        },
+        {
+          stack: "0 L 2 = 6",
+          input: "id * id $",
+          action: "shift 5",
+          type: "shift",
+        },
+        {
+          stack: "0 L 2 = 6 id 5",
+          input: "* id $",
+          action:
+            "ERROR: no action for state 5 on '*'  (id * id is not a valid R)",
+          type: "error",
+        },
+      ];
+
+      // ─── Section switching ────────────────────────────────────────────────────────
+      function show(id) {
+        document
+          .querySelectorAll("section")
+          .forEach((s) => s.classList.remove("active"));
+        document
+          .querySelectorAll(".nav-btn")
+          .forEach((b) => b.classList.remove("active"));
+        document.getElementById(id).classList.add("active");
+        event.target.classList.add("active");
+      }
+
+      // ─── Render States ───────────────────────────────────────────────────────────
+      function renderStates() {
+        const g = document.getElementById("states-grid");
+        STATES.forEach((st) => {
+          const kernelItems = KERNEL[st.id] || [];
+          const items = st.items
+            .map((item) => {
+              const isKernel = kernelItems.includes(item);
+              const html = item.replace("·", '<span class="dot">·</span>');
+              return `<div class="item${isKernel ? " kernel" : ""}">${html}</div>`;
+            })
+            .join("");
+          const gotoHtml = st.goto.length
+            ? `<div class="goto-list">${st.goto.map(([sym, dst]) => `<div class="goto-item">GOTO(I${st.id}, ${sym}) = <span>${dst}</span></div>`).join("")}</div>`
+            : "";
+          const conflictBadge = st.conflict
+            ? ' <span style="color:#f87171;font-size:.7rem">⚡ CONFLICT</span>'
+            : "";
+          g.innerHTML += `<div class="state-card${st.conflict ? " conflict" : ""}">
+      <div class="state-id">I${st.id}${conflictBadge}</div>
+      ${items}${gotoHtml}
+    </div>`;
+        });
+      }
+
+      // ─── Render Parse Table ───────────────────────────────────────────────────────
+      function renderTable() {
+        const t = document.getElementById("parse-table");
+        // Header rows
+        t.innerHTML = `<thead>
+    <tr>
+      <th rowspan="2">State</th>
+      <th colspan="4" class="group">ACTION</th>
+      <th colspan="3" class="group">GOTO</th>
+    </tr>
+    <tr>${TABLE_COLS.map((c) => `<th>${c}</th>`).join("")}</tr>
+  </thead><tbody></tbody>`;
+        const tb = t.querySelector("tbody");
+        TABLE_DATA.forEach((row, i) => {
+          const cells = row
+            .map((v, j) => {
+              if (!v) return "<td></td>";
+              if (v === "CONFLICT")
+                return `<td class="conflict" title="Shift-Reduce Conflict: shift(6) vs reduce(R→L)">s6 / r(R→L) ⚡</td>`;
+              if (v === "acc") return `<td class="acc">acc</td>`;
+              if (v[0] === "s") return `<td class="shift">${v}</td>`;
+              if (v[0] === "r") return `<td class="reduce">${v}</td>`;
+              return `<td class="goto-cell">${v}</td>`;
+            })
+            .join("");
+          tb.innerHTML += `<tr><td class="state">I${i}</td>${cells}</tr>`;
+        });
+      }
+
+      // ─── Parser Trace ─────────────────────────────────────────────────────────────
+      let currentStep = 0;
+      function renderTrace() {
+        const tb = document.getElementById("trace-body");
+        tb.innerHTML = "";
+        TRACE.forEach((row, i) => {
+          const cls =
+            i < currentStep ? "done" : i === currentStep ? "current" : "";
+          const extraCls =
+            row.type === "conflict"
+              ? " conflict-row"
+              : row.type === "error"
+                ? " error-row"
+                : "";
+          const aCls =
+            {
+              shift: "action-shift",
+              reduce: "action-reduce",
+              accept: "action-accept",
+              conflict: "action-conflict",
+              error: "action-error",
+            }[row.type] || "";
+          if (i <= currentStep)
+            tb.innerHTML += `<tr class="${cls}${extraCls}">
+        <td>${i + 1}</td>
+        <td>${row.stack}</td>
+        <td>${row.input}</td>
+        <td class="${aCls}">${row.action}</td>
+      </tr>`;
+        });
+        const n = TRACE.length;
+        document.getElementById("step-counter").textContent =
+          `Step ${currentStep} / ${n - 1}`;
+        document.getElementById("progress-bar").style.width =
+          (currentStep / (n - 1)) * 100 + "%";
+        document.getElementById("btn-prev").disabled = currentStep === 0;
+        document.getElementById("btn-next").disabled = currentStep === n - 1;
+      }
+      function stepTrace(dir) {
+        currentStep = Math.max(
+          0,
+          Math.min(TRACE.length - 1, currentStep + dir),
+        );
+        renderTrace();
+      }
+      function resetTrace() {
+        currentStep = 0;
+        renderTrace();
+      }
+      function showAll() {
+        currentStep = TRACE.length - 1;
+        renderTrace();
+      }
+
+      // ─── Init ─────────────────────────────────────────────────────────────────────
+      renderStates();
+      renderTable();
+      renderTrace();
+    </script>
+  </body>
+</html>
